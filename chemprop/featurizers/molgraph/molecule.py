@@ -1,5 +1,5 @@
-import itertools
 from dataclasses import dataclass, field
+import itertools
 from pathlib import Path
 from typing import Literal
 
