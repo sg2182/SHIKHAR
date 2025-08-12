@@ -85,14 +85,15 @@ class SimpleMoleculeMolGraphFeaturizer(_MolGraphFeaturizerMixin, GraphFeaturizer
             )
         if backward_bond_features_extra is None:
             backward_bond_features_extra = bond_features_extra
-        elif bond_features_extra is None:
+        elif (
+            bond_features_extra is None
+            or self.backward_bond_featurizer is None
+            or backward_bond_features_extra.shape != bond_features_extra.shape
+        ):
             raise ValueError(
-                "`backward_bond_features_extra` requires `bond_features_extra` to be provided!"
-            )
-        elif backward_bond_features_extra.shape != bond_features_extra.shape:
-            raise ValueError(
-                "`backward_bond_features_extra` and `bond_features_extra` must have the same shape!"
-                f"got: {backward_bond_features_extra.shape} and {bond_features_extra.shape}"
+                "Provided `backward_bond_features_extra` must be `None` if either "
+                "`bond_features_extra` or `backward_bond_featurizer` is `None`, "
+                "or must have the same shape as `bond_features_extra`!"
             )
 
         if n_atoms == 0:
@@ -107,26 +108,21 @@ class SimpleMoleculeMolGraphFeaturizer(_MolGraphFeaturizerMixin, GraphFeaturizer
 
         i = 0
         for bond in mol.GetBonds():
-            idx = bond.GetIdx()
-            x_e_forward = self.bond_featurizer(bond)
-            E[i] = (
-                x_e_forward
-                if bond_features_extra is None
-                else np.concatenate((x_e_forward, bond_features_extra[idx]), dtype=np.single)
-            )
+            x_e = self.bond_featurizer(bond)
+            if self.backward_bond_featurizer is None:
+                x_e_rev = x_e
+            else:
+                x_e_rev = self.backward_bond_featurizer(bond)
 
-            x_e_backward = (
-                self.backward_bond_featurizer(bond)
-                if self.backward_bond_featurizer is not None
-                else x_e_forward
-            )
-            E[i + 1] = (
-                x_e_backward
-                if backward_bond_features_extra is None
-                else np.concatenate(
-                    (x_e_backward, backward_bond_features_extra[idx]), dtype=np.single
+            if bond_features_extra is not None:
+                idx = bond.GetIdx()
+                x_e = np.concatenate((x_e, bond_features_extra[idx]), dtype=np.single)
+                x_e_rev = np.concatenate(
+                    (x_e_rev, backward_bond_features_extra[idx]), dtype=np.single
                 )
-            )
+
+            E[i] = x_e
+            E[i + 1] = x_e_rev
 
             u, v = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
             edge_index[0].extend([u, v])
