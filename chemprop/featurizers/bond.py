@@ -2,12 +2,7 @@ from typing import Sequence
 
 from rdkit.Chem.rdchem import Bond, BondStereo, BondType
 
-from chemprop.featurizers.base import (
-    MultiHotFeaturizer,
-    NullityFeaturizer,
-    OneHotFeaturizer,
-    ValueFeaturizer,
-)
+from chemprop.featurizers.base import MultiHotFeaturizer, OneHotFeaturizer, ValueFeaturizer
 
 
 class MultiHotBondFeaturizer(MultiHotFeaturizer[Bond]):
@@ -84,11 +79,11 @@ class MultiHotBondFeaturizer(MultiHotFeaturizer[Bond]):
         )
 
         super().__init__(
-            NullityFeaturizer(),
-            OneHotFeaturizer(lambda b: b.GetBondType(), self.bond_types),
-            ValueFeaturizer(lambda b: b.GetIsConjugated(), int),
-            ValueFeaturizer(lambda b: b.IsInRing(), int),
-            OneHotFeaturizer(lambda b: b.GetStereo(), self.stereos, padding=True),
+            OneHotFeaturizer(Bond.GetBondType, self.bond_types),
+            ValueFeaturizer(Bond.GetIsConjugated, bool),
+            ValueFeaturizer(Bond.IsInRing, bool),
+            OneHotFeaturizer(Bond.GetStereo, self.stereos, padding=True),
+            prepend_null_bit=True,
         )
 
 
@@ -113,4 +108,4 @@ class RIGRBondFeaturizer(MultiHotFeaturizer[Bond]):
     """
 
     def __init__(self):
-        super().__init__(NullityFeaturizer(), ValueFeaturizer(lambda b: b.IsInRing(), int))
+        super().__init__(ValueFeaturizer(Bond.IsInRing, bool), prepend_null_bit=True)

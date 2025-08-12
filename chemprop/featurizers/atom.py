@@ -115,14 +115,14 @@ class MultiHotAtomFeaturizer(MultiHotFeaturizer[Atom], NumOnlyMixin):
         self.hybridizations = hybridizations
 
         super().__init__(
-            OneHotFeaturizer(lambda a: a.GetAtomicNum(), atomic_nums, padding=True),
-            OneHotFeaturizer(lambda a: a.GetTotalDegree(), degrees, padding=True),
-            OneHotFeaturizer(lambda a: a.GetFormalCharge(), formal_charges, padding=True),
-            OneHotFeaturizer(lambda a: a.GetChiralTag(), chiral_tags, padding=True),
-            OneHotFeaturizer(lambda a: a.GetTotalNumHs(), num_Hs, padding=True),
-            OneHotFeaturizer(lambda a: a.GetHybridization(), hybridizations, padding=True),
-            ValueFeaturizer(lambda a: a.GetIsAromatic(), int),
-            ValueFeaturizer(lambda a: 0.01 * a.GetMass(), float),
+            OneHotFeaturizer(Atom.GetAtomicNum, atomic_nums, padding=True),
+            OneHotFeaturizer(Atom.GetTotalDegree, degrees, padding=True),
+            OneHotFeaturizer(Atom.GetFormalCharge, formal_charges, padding=True),
+            OneHotFeaturizer(Atom.GetChiralTag, chiral_tags, padding=True),
+            OneHotFeaturizer(Atom.GetTotalNumHs, num_Hs, padding=True),
+            OneHotFeaturizer(Atom.GetHybridization, hybridizations, padding=True),
+            ValueFeaturizer(Atom.GetIsAromatic, bool),
+            ValueFeaturizer(lambda a: 0.01 * Atom.GetMass(a), float),
         )
 
     @classmethod
@@ -262,10 +262,10 @@ class RIGRAtomFeaturizer(MultiHotFeaturizer[Atom], NumOnlyMixin):
         self.num_Hs = num_Hs or tuple(range(5))
 
         super().__init__(
-            OneHotFeaturizer(lambda a: a.GetAtomicNum(), self.atomic_nums, padding=True),
-            OneHotFeaturizer(lambda a: a.GetTotalDegree(), self.degrees, padding=True),
-            OneHotFeaturizer(lambda a: a.GetTotalNumHs(), self.num_Hs, padding=True),
-            ValueFeaturizer(lambda a: 0.01 * a.GetMass(), float),
+            OneHotFeaturizer(Atom.GetAtomicNum, self.atomic_nums, padding=True),
+            OneHotFeaturizer(Atom.GetTotalDegree, self.degrees, padding=True),
+            OneHotFeaturizer(Atom.GetTotalNumHs, self.num_Hs, padding=True),
+            ValueFeaturizer(lambda a: 0.01 * Atom.GetMass(a), float),
         )
 
 

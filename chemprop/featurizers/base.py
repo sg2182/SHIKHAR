@@ -60,7 +60,7 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
     >>> mol = Chem.MolFromSmiles("C(O)N")
     >>> atom = mol.GetAtomWithIdx(0)
     >>> symbol_featurizer(atom)
-    array([1, 0, 0, 0])
+    array([1., 0., 0., 0.])
     >>> symbol_featurizer.to_string(atom)
     '1000'
 
@@ -70,7 +70,7 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
     ... )
     >>> bond = mol.GetBondWithIdx(0)
     >>> bond_type_featurizer(bond)
-    array([1, 0])
+    array([1., 0.])
     >>> bond_type_featurizer.to_string(bond)
     '10'
 
@@ -80,14 +80,17 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
         self, getter: Callable[[S], Hashable], choices: Sequence[Hashable], padding: bool = False
     ):
         self.getter = getter
-        self.choices = {choice: i for i, choice in enumerate(choices)}
+        self.choices = choices
         self.padding = padding
-        if len(self.choices) != len(choices):
+        if len(self.choices) != len(set(self.choices)):
             raise ValueError("choices must be unique")
+        self._size = len(self.choices) + int(self.padding)
+        self._index_lookup = {choice: i for i, choice in enumerate(self.choices)}
+        self._num_choices = len(self.choices)
 
     def __len__(self) -> int:
         """Return the length of the feature vector."""
-        return len(self.choices) + int(self.padding)
+        return self._size
 
     def __call__(self, input: S | None) -> np.ndarray:
         """Encode an input object as a one-hot vector.
@@ -95,7 +98,7 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
         Parameters
         ----------
         input : S | None
-            The input object. If None, returns a vector of zeros.
+            The input object.
 
         Returns
         -------
@@ -103,14 +106,25 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
             One-hot encoded vector.
 
         """
-        vector = np.zeros(len(self), dtype=int)
+        vector = np.zeros(self._size, dtype=float)
         if input is None:
             return vector
-        option = self.getter(input)
-        index = self.choices.get(option, -1)
-        if self.padding or index != -1:
-            vector[index] = 1
+        self._set(input, vector)
         return vector
+
+    def _set(self, input: S, vector: np.ndarray) -> None:
+        """Set the hot bit of a one-hot encoded feature vector for the given input.
+
+        Parameters
+        ----------
+        input : S
+            The input object.
+        vector : np.ndarray
+            The one-hot encoded vector to set the hot bit of.
+        """
+        index = self._index_lookup.get(self.getter(input), self._num_choices)
+        if self.padding or index != self._num_choices:
+            vector[index] = 1
 
     def to_string(self, input: S | None) -> str:
         """Return a string representation of the feature encoding.
@@ -125,9 +139,7 @@ class OneHotFeaturizer(VectorFeaturizer[S]):
         str
             The string encoding of the feature vector.
         """
-        if input is None:
-            return "0" * len(self)
-        return "".join(map(str, self(input)))
+        return "".join(str(int(x)) for x in self(input))
 
 
 class ValueFeaturizer(VectorFeaturizer[S]):
@@ -181,8 +193,20 @@ class ValueFeaturizer(VectorFeaturizer[S]):
 
         """
         if input is None:
-            return np.zeros(1, dtype=self.dtype)
-        return np.array([self.getter(input)], dtype=self.dtype)
+            return np.zeros(1, dtype=float)
+        return np.array([self.getter(input)], dtype=float)
+
+    def _set(self, input: S, vector: np.ndarray) -> None:
+        """Set the value of a feature vector for the given input.
+
+        Parameters
+        ----------
+        input : S
+            The input object.
+        vector : np.ndarray
+            The feature vector to set the value of.
+        """
+        vector[0] = self.getter(input)
 
     def to_string(self, input: S | None, decimals: int = 3) -> str:
         """Return a string representation of the feature encoding.
@@ -205,19 +229,6 @@ class ValueFeaturizer(VectorFeaturizer[S]):
         return str(int(x))
 
 
-class NullityFeaturizer(VectorFeaturizer[Any]):
-    """A subfeaturizer that encodes whether an input is None."""
-
-    def __len__(self) -> int:
-        return 1
-
-    def __call__(self, input: Any) -> np.ndarray:
-        return np.array([int(input is None)], dtype=int)
-
-    def to_string(self, input: Any) -> str:
-        return "1" if input is None else "0"
-
-
 class MultiHotFeaturizer(VectorFeaturizer[S]):
     """A vector featurizer that concatenates multiple subfeaturizers.
 
@@ -238,7 +249,7 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     ...     getter=lambda atom: 0.01 * atom.GetMass(), dtype=float
     ... )
     >>> featurizer = MultiHotFeaturizer[Chem.Atom](
-    ...     NullityFeaturizer(), symbol_featurizer, mass_featurizer
+    ...     symbol_featurizer, mass_featurizer, prepend_null_bit=True
     ... )
     >>> mol = Chem.MolFromSmiles("C(O)N")
     >>> atom = mol.GetAtomWithIdx(0)
@@ -248,16 +259,29 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     '1 0000 0.000'
     """
 
-    def __init__(self, *subfeats: OneHotFeaturizer[S] | ValueFeaturizer[S] | NullityFeaturizer):
+    def __init__(
+        self, *subfeats: OneHotFeaturizer[S] | ValueFeaturizer[S], prepend_null_bit: bool = False
+    ):
         self.subfeats = subfeats
+        self.prepend_null_bit = prepend_null_bit
         self._subfeat_sizes = list(map(len, subfeats))
-        self._size = sum(self._subfeat_sizes)
+        self._size = sum(self._subfeat_sizes) + int(prepend_null_bit)
 
     def __len__(self):
         return self._size
 
     def __call__(self, input: S | None) -> np.ndarray:
-        return np.concatenate([f(input) for f in self.subfeats])
+        x = np.zeros(self._size, dtype=float)
+        if input is None:
+            if self.prepend_null_bit:
+                x[0] = 1
+            return x
+        start = self.prepend_null_bit
+        for subfeat, size in zip(self.subfeats, self._subfeat_sizes):
+            end = start + size
+            subfeat._set(input, x[start:end])
+            start = end
+        return x
 
     def to_string(self, input: S | None, decimals: int = 3) -> str:
         """Return a string representation of the concatenated subfeatures.
@@ -276,7 +300,10 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
             subfeature.
 
         """
-        return " ".join(
+        strings = [
             f.to_string(input, decimals) if isinstance(f, ValueFeaturizer) else f.to_string(input)
             for f in self.subfeats
-        )
+        ]
+        if self.prepend_null_bit:
+            strings = ["1" if input is None else "0"] + strings
+        return " ".join(strings)
