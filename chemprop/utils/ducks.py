@@ -1,7 +1,8 @@
-import cppyy
-import pathlib
 import os
+import pathlib
 import sys
+
+import cppyy
 
 
 def setup_rdkit_cpp():
@@ -179,11 +180,8 @@ class DuckAtom:
     Provides a minimal interface for atom features, mimicking RDKit's Atom API for use in
     featurization and graph construction without requiring a full RDKit molecule object.
     """
-    def __init__(
-        self,
-        index: int,
-        atom_data: cppyy.gbl.AtomData,
-    ):
+
+    def __init__(self, index: int, atom_data: cppyy.gbl.AtomData):
         self.index = index
         self.atom_data = atom_data
 
@@ -228,12 +226,8 @@ class DuckBond:
     Provides a minimal interface for bond features, mimicking RDKit's Bond API for use in
     featurization and graph construction without requiring a full RDKit molecule object.
     """
-    def __init__(
-        self,
-        index: int,
-        atoms: list[DuckAtom],
-        bond_data: cppyy.gbl.BondData
-    ):
+
+    def __init__(self, index: int, atoms: list[DuckAtom], bond_data: cppyy.gbl.BondData):
         self.index = index
         self.atoms = atoms
         self.bond_data = bond_data
@@ -276,16 +270,13 @@ class DuckMol:
     Provides a minimal interface for molecule features, mimicking RDKit's Molecule API for use in
     featurization and graph construction without requiring a full RDKit molecule object.
     """
+
     def __init__(self, mol_data: cppyy.gbl.MoleculeData):
         self.mol_data = mol_data
-        self.atoms = [
-            DuckAtom(index, data)
-            for index, data in enumerate(self.mol_data.atom_data)
-        ]
+        self.atoms = [DuckAtom(index, data) for index, data in enumerate(self.mol_data.atom_data)]
 
         self.bonds = [
-            DuckBond(index, self.atoms, data)
-            for index, data in enumerate(self.mol_data.bond_data)
+            DuckBond(index, self.atoms, data) for index, data in enumerate(self.mol_data.bond_data)
         ]
 
     def GetAtomWithIdx(self, idx: int) -> DuckAtom:

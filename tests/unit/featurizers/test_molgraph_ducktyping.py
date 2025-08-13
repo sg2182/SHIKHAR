@@ -15,7 +15,9 @@ def use_duck_typing(request):
 
 @pytest.fixture
 def mol(use_duck_typing):
-    return make_mol("Fc1cccc(C2(c3nnc(Cc4cccc5ccccc45)o3)CCOCC2)c1", use_duck_typing=use_duck_typing)
+    return make_mol(
+        "Fc1cccc(C2(c3nnc(Cc4cccc5ccccc45)o3)CCOCC2)c1", use_duck_typing=use_duck_typing
+    )
 
 
 @pytest.fixture(params=[0, 10, 100])
