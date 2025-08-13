@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Hashable, Sized
-from typing import Any, Callable, Generic, Sequence, Type, TypeVar
+from typing import Callable, Generic, Sequence, Type, TypeVar
 
 import numpy as np
 
@@ -236,6 +236,9 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     ----------
     *subfeats : Subfeaturizer
         The subfeatures to concatenate.
+    prepend_null_bit : bool, default=False
+        If True, prepends a bit to the feature vector to indicate that the input is
+        None.
 
     Example
     -------
