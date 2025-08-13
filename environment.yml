@@ -10,7 +10,9 @@ dependencies:
   - lightning>=2.0
   - numpy
   - pandas
-  - rdkit
+  - rdkit-dev
+  - libboost-devel
+  - cppyy
   - scikit-learn
   - scipy
   - rich
