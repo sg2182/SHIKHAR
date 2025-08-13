@@ -8,6 +8,8 @@ import numpy as np
 import psutil
 from rdkit import Chem
 
+from chemprop.utils.ducks import DuckMol, make_duck_mol
+
 
 class EnumMapping(StrEnum):
     @classmethod
@@ -41,7 +43,8 @@ def make_mol(
     add_h: bool = False,
     ignore_stereo: bool = False,
     reorder_atoms: bool = False,
-) -> Chem.Mol:
+    use_duck_typing: bool = False,
+) -> Chem.Mol | DuckMol:
     """build an RDKit molecule from a SMILES string.
 
     Parameters
@@ -59,12 +62,17 @@ def make_mol(
         whether to reorder the atoms in the molecule by their atom map numbers. This is useful when
         the order of atoms in the SMILES string does not match the atom mapping, e.g. '[F:2][Cl:1]'.
         Default is False. NOTE: This does not reorder the bonds.
+    use_duck_typing : bool, optional
+        whether to use duck typing to create a lightweight molecule object. Default is False.
 
     Returns
     -------
     Chem.Mol
         the RDKit molecule.
     """
+    if use_duck_typing:
+        return make_duck_mol(smi, keep_h, add_h, ignore_stereo, reorder_atoms)
+
     params = Chem.SmilesParserParams()
     params.removeHs = not keep_h
     mol = Chem.MolFromSmiles(smi, params)
