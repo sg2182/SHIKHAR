@@ -79,10 +79,10 @@ class MultiHotBondFeaturizer(MultiHotFeaturizer[Bond]):
         )
 
         super().__init__(
-            OneHotFeaturizer(Bond.GetBondType, self.bond_types),
-            ValueFeaturizer(Bond.GetIsConjugated, bool),
-            ValueFeaturizer(Bond.IsInRing, bool),
-            OneHotFeaturizer(Bond.GetStereo, self.stereos, padding=True),
+            OneHotFeaturizer(lambda b: b.GetBondType(), self.bond_types),
+            ValueFeaturizer(lambda b: b.GetIsConjugated(), bool),
+            ValueFeaturizer(lambda b: b.IsInRing(), bool),
+            OneHotFeaturizer(lambda b: b.GetStereo(), self.stereos, padding=True),
             prepend_null_bit=True,
         )
 
@@ -108,4 +108,4 @@ class RIGRBondFeaturizer(MultiHotFeaturizer[Bond]):
     """
 
     def __init__(self):
-        super().__init__(ValueFeaturizer(Bond.IsInRing, bool), prepend_null_bit=True)
+        super().__init__(ValueFeaturizer(lambda b: b.IsInRing(), bool), prepend_null_bit=True)
