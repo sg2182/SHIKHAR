@@ -5,12 +5,12 @@ from typing import Literal
 
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Mol
+from rdkit.Chem import Bond, Mol
 import torch
 from torch import Tensor
 
 from chemprop.data.molgraph import MolGraph
-from chemprop.featurizers.base import Featurizer, GraphFeaturizer
+from chemprop.featurizers.base import Featurizer, GraphFeaturizer, VectorFeaturizer
 from chemprop.featurizers.molgraph.mixins import _MolGraphFeaturizerMixin
 from chemprop.utils.utils import is_cuikmolmaker_available
 
@@ -31,18 +31,18 @@ class SimpleMoleculeMolGraphFeaturizer(_MolGraphFeaturizerMixin, GraphFeaturizer
     bond_featurizer : BondFeaturizer, default=MultiHotBondFeaturizer()
         the featurizer with which to calculate feature representations of the bonds in a given
         molecule
-    backward_bond_featurizer : BondFeaturizer | None, default=None
-        the featurizer with which to compute feature representations for backward bonds in a
-        molecule. If this is ``None``, the ``bond_featurizer`` will be used for both forward and
-        backward bonds. A forward bond is defined as starting at ``bond.GetBeginAtom()`` and ending
-        at ``bond.GetEndAtom()``, while a reversed bond starts at ``bond.GetEndAtom()`` and ends at
-        ``bond.GetBeginAtom()``.
     extra_atom_fdim : int, default=0
         the dimension of the additional features that will be concatenated onto the calculated
         features of each atom
     extra_bond_fdim : int, default=0
         the dimension of the additional features that will be concatenated onto the calculated
         features of each bond
+    backward_bond_featurizer : BondFeaturizer | None, default=None
+        the featurizer with which to compute feature representations for backward bonds in a
+        molecule. If this is ``None``, the ``bond_featurizer`` will be used for both forward and
+        backward bonds. A forward bond is defined as starting at ``bond.GetBeginAtom()`` and ending
+        at ``bond.GetEndAtom()``, while a reversed bond starts at ``bond.GetEndAtom()`` and ends at
+        ``bond.GetBeginAtom()``.
 
     Example
     -------
@@ -62,9 +62,15 @@ class SimpleMoleculeMolGraphFeaturizer(_MolGraphFeaturizerMixin, GraphFeaturizer
 
     extra_atom_fdim: int = 0
     extra_bond_fdim: int = 0
+    backward_bond_featurizer: VectorFeaturizer[Bond] | None = None
 
     def __post_init__(self):
         super().__post_init__()
+        if (
+            self.backward_bond_featurizer is not None
+            and len(self.backward_bond_featurizer) != self.bond_fdim
+        ):
+            raise ValueError("backward_bond_featurizer must have same dimension as bond_featurizer")
         self.atom_fdim += self.extra_atom_fdim
         self.bond_fdim += self.extra_bond_fdim
 

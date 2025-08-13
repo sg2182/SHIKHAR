@@ -236,7 +236,7 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     ----------
     *subfeats : Subfeaturizer
         The subfeatures to concatenate.
-    prepend_null_bit : bool, default=False
+    prepend_nullity_bit : bool, default=False
         If True, prepends a bit to the feature vector to indicate that the input is
         None.
 
@@ -252,7 +252,7 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     ...     getter=lambda atom: 0.01 * atom.GetMass(), dtype=float
     ... )
     >>> featurizer = MultiHotFeaturizer[Chem.Atom](
-    ...     symbol_featurizer, mass_featurizer, prepend_null_bit=True
+    ...     symbol_featurizer, mass_featurizer, prepend_nullity_bit=True
     ... )
     >>> mol = Chem.MolFromSmiles("C(O)N")
     >>> atom = mol.GetAtomWithIdx(0)
@@ -263,12 +263,12 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     """
 
     def __init__(
-        self, *subfeats: OneHotFeaturizer[S] | ValueFeaturizer[S], prepend_null_bit: bool = False
+        self, *subfeats: OneHotFeaturizer[S] | ValueFeaturizer[S], prepend_nullity_bit: bool = False
     ):
         self.subfeats = subfeats
-        self.prepend_null_bit = prepend_null_bit
+        self.prepend_nullity_bit = prepend_nullity_bit
         self._subfeat_sizes = list(map(len, subfeats))
-        self._size = sum(self._subfeat_sizes) + int(prepend_null_bit)
+        self._size = sum(self._subfeat_sizes) + int(prepend_nullity_bit)
 
     def __len__(self):
         return self._size
@@ -276,10 +276,10 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
     def __call__(self, input: S | None) -> np.ndarray:
         x = np.zeros(self._size, dtype=float)
         if input is None:
-            if self.prepend_null_bit:
+            if self.prepend_nullity_bit:
                 x[0] = 1
             return x
-        start = self.prepend_null_bit
+        start = self.prepend_nullity_bit
         for subfeat, size in zip(self.subfeats, self._subfeat_sizes):
             end = start + size
             subfeat._set(input, x[start:end])
@@ -307,6 +307,6 @@ class MultiHotFeaturizer(VectorFeaturizer[S]):
             f.to_string(input, decimals) if isinstance(f, ValueFeaturizer) else f.to_string(input)
             for f in self.subfeats
         ]
-        if self.prepend_null_bit:
+        if self.prepend_nullity_bit:
             strings = ["1" if input is None else "0"] + strings
         return " ".join(strings)
