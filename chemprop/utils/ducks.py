@@ -59,7 +59,7 @@ cppyy.cppdef(
         int end_atom_idx;
         int bond_type;
         bool is_aromatic;
-        bool is_conjugated;  
+        bool is_conjugated;
         bool in_ring;
         int stereo;
     };
@@ -85,7 +85,7 @@ cppyy.cppdef(
         try {
             RDKit::SmilesParserParams parser_params;
             parser_params.removeHs = !keep_h;
-            
+
             std::unique_ptr<RDKit::RWMol> mol(RDKit::SmilesToMol(smiles, parser_params));
             if (!mol) {
                 result.error_message = "Failed to parse SMILES";
@@ -122,7 +122,7 @@ cppyy.cppdef(
                         return amap_a < amap_b;
                     }
                 );
-                
+
                 RDKit::ROMol* reordered_mol = RDKit::MolOps::renumberAtoms(*mol, indices);
                 mol.reset(static_cast<RDKit::RWMol*>(reordered_mol));
             }
@@ -158,15 +158,15 @@ cppyy.cppdef(
                 bond_data.in_ring = ring_info->numBondRings(bond->getIdx()) != 0;
                 bond_data.stereo = static_cast<int>(bond->getStereo());
             }
-            
+
             result.success = true;
-        
+
         } catch (const std::exception& e) {
             result.error_message = e.what();
         } catch (...) {
             result.error_message = "Unknown error";
         }
-        
+
         return result;
     }
     """
