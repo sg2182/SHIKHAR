@@ -277,10 +277,11 @@ def convert_hyper_parameters_v1_to_v2(model_v1_dict: dict) -> dict:
             "task_weights": None,
             "dropout": args_v1.dropout,
             "hidden_dim": args_v1.ffn_hidden_size,
-            "input_dim": args_v1.hidden_size
-            + args_v1.atom_descriptors_size
-            + d_xd
-            + (args_v1.hidden_size_solvent if getattr(args_v1, "reaction_solvent", False) else 0),
+            "input_dim": (
+                (args_v1.hidden_size + args_v1.hidden_size_solvent)
+                if getattr(args_v1, "reaction_solvent", False)
+                else (args_v1.hidden_size * getattr(args_v1, "number_of_molecules", 1))
+            ) + args_v1.atom_descriptors_size + d_xd,
             "n_layers": args_v1.ffn_num_layers - 1,
             "n_tasks": args_v1.num_tasks,
         }
