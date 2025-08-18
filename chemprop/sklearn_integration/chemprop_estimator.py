@@ -449,7 +449,7 @@ class ChempropRegressor(BaseEstimator, RegressorMixin):
             collate_fn=pick_collate(X),
             drop_last=True,
         )
-        preds = self.trainer.predict(self.model, dataloaders=dl)
+        preds = self.trainer.predict(dataloaders=dl)
         return torch.cat(preds, dim=0).view(-1).cpu().numpy()
 
     def score(self, X, y=None, metric: Literal["mae", "rmse", "mse", "r2", "accuracy"] = "rmse"):
